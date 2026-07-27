@@ -1,4 +1,4 @@
-# CurlLab
+# curl-lab
 
 A web app for parsing, organizing, and executing cURL requests right from your browser. Paste any cURL command, tweak headers/body in a Monaco editor, and run it — either from the server or locally via a WebSocket agent.
 
@@ -31,7 +31,7 @@ A web app for parsing, organizing, and executing cURL requests right from your b
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Emmraan/curl-lab.git
-cd curllab
+cd curl-lab
 
 # 2. Install dependencies
 pnpm install
@@ -75,7 +75,7 @@ By default, the agent connects to `ws://localhost:3000`. Once connected, you'll 
 ## Project Structure
 
 ```
-curllab
+curl-lab
 ├── app/                    # Next.js App Router pages and API routes
 │   ├── api/
 │   │   ├── agent/status/   # Local Agent connection status endpoint
