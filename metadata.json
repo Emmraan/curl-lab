@@ -1,0 +1,5 @@
+{
+  "name": "CurlLab",
+  "description": "A production-ready playground for parsing, organizing, and executing cURL requests locally and through a local agent.",
+  "requestFramePermissions": []
+}
