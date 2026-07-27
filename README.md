@@ -30,7 +30,7 @@ A web app for parsing, organizing, and executing cURL requests right from your b
 
 ```bash
 # 1. Clone the repository
-git clone <repo-url>
+git clone https://github.com/Emmraan/curl-lab.git
 cd curllab
 
 # 2. Install dependencies
