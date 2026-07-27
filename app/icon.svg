@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#09090b"/>
+  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+        font-family="ui-monospace, monospace" font-weight="700" font-size="56"
+        fill="#e4e4e7" letter-spacing="-2">cL</text>
+  <path d="M30 70 Q36 64 30 58" stroke="#6366f1" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M98 70 Q92 64 98 58" stroke="#6366f1" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>
