@@ -30,7 +30,7 @@ const FRAMEWORK_GUIDES: FrameworkGuide[] = [
     category: "Node.js",
     ready: false,
     description: "Install the cors middleware and enable it on your app.",
-    snippet: `npm install cors\n\nconst cors = require("cors");\napp.use(cors()); // allow all origins\n\n// or restrict:\n// app.use(cors({ origin: "https://your-app.vercel.app" }));`,
+    snippet: `npm install cors\n\nconst cors = require("cors");\napp.use(cors()); // allow all origins\n\n// or restrict:\n// app.use(cors({ origin: "https://curl-lab-eight.vercel.app" }));`,
   },
   {
     name: "Plain Node http server",
@@ -51,7 +51,7 @@ const FRAMEWORK_GUIDES: FrameworkGuide[] = [
     category: "Python",
     ready: false,
     description: "Use the flask-cors extension.",
-    snippet: `pip install flask-cors\n\nfrom flask import Flask\nfrom flask_cors import CORS\n\napp = Flask(__name__)\nCORS(app)  # allow all origins\n\n# or scoped:\n# CORS(app, origins=["https://your-app.vercel.app"])`,
+    snippet: `pip install flask-cors\n\nfrom flask import Flask\nfrom flask_cors import CORS\n\napp = Flask(__name__)\nCORS(app)  # allow all origins\n\n# or scoped:\n# CORS(app, origins=["https://curl-lab-eight.vercel.app"])`,
   },
   {
     name: "FastAPI",
