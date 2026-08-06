@@ -285,6 +285,7 @@ export default function Home() {
             onSaveRequest={handleSavePlaygroundRequest}
             onUpdateSavedRequest={handleUpdateSavedRequest}
             onAddHistory={handleAddHistory}
+            onNavigate={setActiveTab}
           />
         )}
 

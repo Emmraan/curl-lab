@@ -14,29 +14,29 @@ Package manager is **pnpm** (`packageManager` field in `package.json`).
 
 ## Architecture
 
-- **Custom server** (`server.js`) — wraps Next.js with a WebSocket server on `/api/ws`. This is the entrypoint, not `next dev`.
+- **Custom server** (`server.js`) — minimal HTTP wrapper around Next.js (plain `next` handler, no WebSocket). Entrypoint for local `pnpm dev` / `pnpm start`; ignored on Vercel, which serves the standard Next.js output.
 - **Auth** — simple username/password via `.env` (`APP_USERNAME`, `APP_PASSWORD`, `SESSION_SECRET`). Sessions are HMAC-signed cookies (7-day expiry), DIY without Passport or NextAuth.
 - **Data** — all folders, saved requests, and history live in **localStorage** only. No database. First-time users get seed data (GitHub API, Stripe API folders).
 - **Request execution** — two paths:
   - **Server-side** (public URLs): SSRF-protected via DNS resolution + private IP blocklist. Max 60s timeout, 5MB response cap.
-  - **Local Agent** (localhost/private URLs): relays via WebSocket to a standalone Node.js script (`public/agent.js`) that does the actual HTTP call.
-- **State** — `global.activeAgentSocket` and `global.pendingRequests` (Map) bridge HTTP API routes with WebSocket agent responses.
+  - **Browser-direct** (localhost/private URLs): executed in the browser via `fetch(mode: "cors")`, gated by Chrome's Local Network Access permission + the target server's CORS headers. No agent, no WebSocket.
+- **Network detection** — `lib/network.ts` holds pure `isLocalhost` / `isPrivateIp` / `isPrivateHostname` helpers (no Node imports) shared by both the server SSRF checks and client-side routing.
 
 ## Key file layout
 
 | Path | Purpose |
 |---|---|
-| `server.js` | Custom HTTP + WS server entrypoint |
-| `app/api/execute/route.ts` | Request execution endpoint (server + agent dispatch) |
-| `app/api/agent/status/route.ts` | Agent connection status |
+| `server.js` | Custom HTTP server entrypoint (plain Next handler, no WebSocket) |
+| `app/api/execute/route.ts` | Request execution endpoint (public URLs only) |
 | `app/api/auth/*/route.ts` | Login/logout/session check |
 | `lib/parser.ts` | cURL command tokenizer + parser |
 | `lib/executor.ts` | Server-side HTTP execution with SSRF protection |
+| `lib/network.ts` | Pure localhost/private-IP detection (shared server + client) |
 | `lib/storage.ts` | localStorage CRUD for folders, requests, history, backup |
 | `lib/session.ts` | Session token create/verify (HMAC + base64) |
-| `public/agent.js` | Local Agent script (run separately with `node public/agent.js`) |
-| `components/Playground.tsx` | Main request editor + execution UI |
+| `components/Playground.tsx` | Main request editor + execution UI (browser-direct localhost) |
 | `components/Sidebar.tsx` | Folder tree + request list navigation |
+| `components/SettingsView.tsx` | Settings + Localhost CORS setup guide |
 
 ## Conventions & quirks
 

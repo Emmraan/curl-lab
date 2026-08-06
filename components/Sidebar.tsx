@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Terminal, Folder, FolderOpen, FileText, Plus, Edit2, Trash2, 
   Copy, Star, Settings, History, Download, User2, ChevronRight, 
@@ -43,7 +43,6 @@ export default function Sidebar({
   isCollapsed,
   onToggleCollapse,
 }: SidebarProps) {
-  const [agentConnected, setAgentConnected] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -57,22 +56,6 @@ export default function Sidebar({
   // Move request modal
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [requestToMove, setRequestToMove] = useState<SavedRequest | null>(null);
-
-  // Auto-fetch agent connection status
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch("/api/agent/status");
-        const data = await res.json();
-        setAgentConnected(!!data.connected);
-      } catch {
-        setAgentConnected(false);
-      }
-    };
-    checkStatus();
-    const interval = setInterval(checkStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => ({
@@ -336,14 +319,6 @@ export default function Sidebar({
 
         {/* Action Controls & Collapse Button */}
         <div className="flex items-center space-x-2">
-          {/* Agent Badge */}
-          <div className="flex items-center space-x-1.5 bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-            <div className={`w-1.5 h-1.5 rounded-full ${agentConnected ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"}`} />
-            <span className="text-[9px] uppercase font-mono font-bold tracking-wider text-zinc-400">
-              {agentConnected ? "Live" : "Offline"}
-            </span>
-          </div>
-
           <button
             onClick={onToggleCollapse}
             title="Collapse Sidebar"

@@ -10,6 +10,7 @@ import {
   Clock, HardDrive, Copy, Check, Download, AlertCircle, Eye, EyeOff
 } from "lucide-react";
 import { parseCurl } from "@/lib/parser";
+import { isPrivateHostname } from "@/lib/network";
 import { SavedRequest } from "@/lib/storage";
 
 interface PlaygroundProps {
@@ -17,6 +18,7 @@ interface PlaygroundProps {
   onSaveRequest: (title: string, description: string, curl: string, parsed: any, tags: string[]) => void;
   onUpdateSavedRequest: (id: string, curl: string, parsed: any) => void;
   onAddHistory: (curl: string, method: string, url: string, status: number, time: number, size: number) => void;
+  onNavigate: (tab: "playground" | "history" | "backup" | "profile" | "settings") => void;
 }
 
 export default function Playground({
@@ -24,6 +26,7 @@ export default function Playground({
   onSaveRequest,
   onUpdateSavedRequest,
   onAddHistory,
+  onNavigate,
 }: PlaygroundProps) {
   const [curlInput, setCurlInput] = useState("");
   const [parsed, setParsed] = useState<any>(null);
@@ -134,44 +137,143 @@ export default function Playground({
     setCurlInput(formatted);
   };
 
+  // Browser-direct execution for localhost/private targets.
+  // Mirrors the old Local Agent logic but runs entirely in the browser,
+  // so no downloadable companion process is needed.
+  const executeFromBrowser = async (parsedReq: any): Promise<any> => {
+    const { method, url, headers, body, multipart, timeout = 30000 } = parsedReq;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), Math.min(timeout, 60000));
+
+    const requestHeaders: Record<string, string> = { ...headers };
+    delete requestHeaders["host"];
+    delete requestHeaders["content-length"];
+
+    let requestBody: any = body;
+
+    if (multipart && multipart.length > 0) {
+      const formData = new FormData();
+      multipart.forEach(({ key, value }: { key: string; value: string }) => {
+        formData.append(key, value);
+      });
+      delete requestHeaders["content-type"];
+      requestBody = formData;
+    }
+
+    const startTime = Date.now();
+
+    try {
+      const fetchResponse = await fetch(url, {
+        method,
+        headers: requestHeaders,
+        body: method !== "GET" && method !== "HEAD" ? requestBody : undefined,
+        signal: controller.signal,
+      });
+
+      const endTime = Date.now();
+      const elapsedTime = endTime - startTime;
+
+      const responseText = await fetchResponse.text();
+      const responseHeaders: Record<string, string> = {};
+      fetchResponse.headers.forEach((val, key) => {
+        responseHeaders[key] = val;
+      });
+
+      const statusLine = `HTTP/1.1 ${fetchResponse.status} ${fetchResponse.statusText}\r\n`;
+      const headersSection = Object.entries(responseHeaders)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\r\n");
+      const rawResponse = `${statusLine}${headersSection}\r\n\r\n${responseText}`;
+
+      return {
+        status: fetchResponse.status,
+        statusText: fetchResponse.statusText,
+        headers: responseHeaders,
+        body: responseText,
+        size: new TextEncoder().encode(responseText).length,
+        time: elapsedTime,
+        rawResponse,
+      };
+    } catch (err: any) {
+      const endTime = Date.now();
+      const message = err.message || "Unknown error";
+      const corsBlocked =
+        message.includes("Failed to fetch") ||
+        message.includes("NetworkError") ||
+        message.includes("CORS") ||
+        message.includes("blocked");
+
+      return {
+        status: 0,
+        statusText: corsBlocked ? "CORS Blocked" : "Browser Request Error",
+        headers: {},
+        body: corsBlocked
+          ? `The browser blocked this request to "${url}".\n\nThis usually happens for one of two reasons:\n\n1. The local server does not send CORS headers (Access-Control-Allow-Origin). Add CORS to your local server — see the Localhost Setup Guide in Settings.\n\n2. (Chrome 142+) The "Access other apps and services on this device" permission has not been allowed yet. Grant it once when prompted.`
+          : `Browser request failed: ${message}`,
+        size: 0,
+        time: endTime - startTime,
+        rawResponse: `HTTP/1.1 0 ${corsBlocked ? "CORS Blocked" : "Error"}\r\n\r\n${message}`,
+        localHint: corsBlocked,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
   const handleRun = async () => {
     if (!parsed || !parsed.url) return;
     setLoading(true);
     setResponse(null);
 
-    try {
-      const res = await fetch("/api/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          curl: curlInput,
-          parsedRequest: parsed,
-        }),
-      });
+    const isLocal = isPrivateHostname(parsed.url);
 
-      const data = await res.json();
-      
-      if (res.ok && data.success) {
-        setResponse(data.response);
-        // Save to execution history
+    try {
+      if (isLocal) {
+        // Browser-direct execution for localhost/private targets
+        const localResponse = await executeFromBrowser(parsed);
+        setResponse(localResponse);
         onAddHistory(
           curlInput,
           parsed.method,
           parsed.url,
-          data.response.status,
-          data.response.time,
-          data.response.size
+          localResponse.status,
+          localResponse.time,
+          localResponse.size
         );
       } else {
-        setResponse({
-          status: 0,
-          statusText: "Execution Failed",
-          headers: {},
-          body: data.error || "Execution failed. Server returned an error.",
-          size: 0,
-          time: 0,
-          rawResponse: `HTTP/1.1 0 Error\r\n\r\nError: ${data.error || "Unknown server-side error"}`,
+        const res = await fetch("/api/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            curl: curlInput,
+            parsedRequest: parsed,
+          }),
         });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          setResponse(data.response);
+          // Save to execution history
+          onAddHistory(
+            curlInput,
+            parsed.method,
+            parsed.url,
+            data.response.status,
+            data.response.time,
+            data.response.size
+          );
+        } else {
+          setResponse({
+            status: 0,
+            statusText: "Execution Failed",
+            headers: {},
+            body: data.error || "Execution failed. Server returned an error.",
+            size: 0,
+            time: 0,
+            rawResponse: `HTTP/1.1 0 Error\r\n\r\nError: ${data.error || "Unknown server-side error"}`,
+          });
+        }
       }
     } catch (err: any) {
       setResponse({
@@ -513,6 +615,23 @@ export default function Playground({
             </div>
           )}
         </div>
+
+        {/* CORS / permission hint for blocked localhost requests */}
+        {response?.localHint && (
+          <div className="flex items-start space-x-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-[11px]">
+            <AlertCircle size={13} className="mt-0.5 shrink-0" />
+            <div className="leading-relaxed">
+              <span className="font-semibold">The browser blocked this localhost request.</span>{" "}
+              Either your local server is missing CORS headers, or the browser permission has not been granted yet.
+              <button
+                onClick={() => onNavigate("settings")}
+                className="ml-1.5 text-amber-200 underline underline-offset-2 hover:text-white"
+              >
+                Open Localhost Setup Guide
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tab Controls */}
         {response ? (

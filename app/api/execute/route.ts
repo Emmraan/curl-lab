@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseCurl } from "@/lib/parser";
 import { executeHttpRequest, isLocalhost, validateUrlForSsrf } from "@/lib/executor";
-import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,58 +21,20 @@ export async function POST(req: NextRequest) {
 
     const targetUrl = parsedRequest.url;
 
-    // 1. Localhost Detection
+    // Localhost/private targets run directly in the browser (browser-direct mode),
+    // so they should never reach this server endpoint. Guard just in case.
     if (isLocalhost(targetUrl)) {
-      // Check if we have an active agent connection
-      const agentWs = (global as any).activeAgentSocket;
-      const pendingReqs = (global as any).pendingRequests;
-
-      if (!agentWs) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "This request targets localhost. Please start the Local Agent.",
-          },
-          { status: 400 }
-        );
-      }
-
-      const requestId = crypto.randomUUID();
-
-      // Create a promise that resolves when the agent returns the response
-      const executionPromise = new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          if (pendingReqs.has(requestId)) {
-            pendingReqs.delete(requestId);
-            reject(new Error("Local Agent execution timed out after 35 seconds."));
-          }
-        }, 35000);
-
-        pendingReqs.set(requestId, (responsePayload: any) => {
-          clearTimeout(timeoutId);
-          resolve(responsePayload);
-        });
-      });
-
-      // Send the execution job to the Local Agent
-      agentWs.send(
-        JSON.stringify({
-          type: "execute",
-          requestId,
-          payload: parsedRequest,
-        })
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "This request targets localhost, which is executed directly in your browser. If you see this error, refresh the page and try again.",
+        },
+        { status: 400 }
       );
-
-      // Wait for the agent to execute and return the response
-      const agentResult = await executionPromise as any;
-      
-      return NextResponse.json({
-        success: true,
-        response: agentResult,
-      });
     }
 
-    // 2. Public IP Request: Run on the server
+    // Public IP Request: Run on the server
     // Validate for SSRF
     const ssrfCheck = await validateUrlForSsrf(targetUrl);
     if (!ssrfCheck.valid) {

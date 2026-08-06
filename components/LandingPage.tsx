@@ -98,7 +98,7 @@ export default function LandingPage({ onLoginSuccess }: LandingPageProps) {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-zinc-400 text-base md:text-lg mb-8 max-w-2xl font-normal leading-relaxed"
             >
-              Paste cURL commands, parse into structured HTTP components instantly, organize them in custom local folders, and route localhost requests seamlessly through a secure Local Agent.
+              Paste cURL commands, parse into structured HTTP components instantly, organize them in custom local folders, and run requests targeting <code className="text-indigo-300">localhost</code> directly from your browser.
             </motion.p>
 
             <motion.div
@@ -149,9 +149,9 @@ export default function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 <div className="bg-indigo-500/10 text-indigo-400 p-3 rounded-lg w-fit mb-4">
                   <Cpu size={20} />
                 </div>
-                <h3 className="font-semibold text-white mb-2">Local Agent WebSocket</h3>
+                <h3 className="font-semibold text-white mb-2">Direct Localhost Access</h3>
                 <p className="text-sm text-zinc-400 leading-relaxed">
-                  Safely route requests targeting <code className="text-xs text-indigo-300">localhost</code> or private loops directly to your local computer companion.
+                  Execute requests targeting <code className="text-xs text-indigo-300">localhost</code> or private loops directly in your browser — no downloadable agent required.
                 </p>
               </div>
 
