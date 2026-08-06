@@ -73,6 +73,14 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  // Fire a harmless loopback probe on first visit so Chrome shows the
+  // Local Network Access permission prompt up-front instead of mid-request.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.isSecureContext) {
+      fetch("http://127.0.0.1:1/", { mode: "no-cors" }).catch(() => {});
+    }
+  }, []);
+
   const syncLocalStorageData = () => {
     setFolders(loadFolders());
     setRequests(loadRequests());
